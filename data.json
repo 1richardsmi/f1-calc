@@ -1,0 +1,62 @@
+{
+  "total_stages": 22,
+  "total_sprints": 6,
+  "history": [
+    {
+      "name": "Australia",
+      "is_sprint": false,
+      "participants": [
+        {"name": "RUS", "team": "Mercedes"},
+        {"name": "ANT", "team": "Mercedes"},
+        {"name": "LEC", "team": "Ferrari"},
+        {"name": "HAM", "team": "Ferrari"},
+        {"name": "NOR", "team": "McLaren"},
+        {"name": "VER", "team": "Red Bull"},
+        {"name": "BER", "team": "Haas"},
+        {"name": "LIN", "team": "Racing Bulls"},
+        {"name": "BOR", "team": "Audi"},
+        {"name": "GAS", "team": "Alpine"},
+        {"name": "OKO", "team": "Haas"},
+        {"name": "ALB", "team": "Williams"},
+        {"name": "LOW", "team": "Racing Bulls"},
+        {"name": "COL", "team": "Alpine"},
+        {"name": "SAI", "team": "Williams"},
+        {"name": "PER", "team": "Cadillac"},
+        {"name": "STR", "team": "Aston Martin"},
+        {"name": "ALO", "team": "Aston Martin"},
+        {"name": "BOT", "team": "Cadillac"},
+        {"name": "HAD", "team": "Red Bull"},
+        {"name": "PIA", "team": "McLaren"},
+        {"name": "HUL", "team": "Audi"}
+      ]
+    },
+    {
+      "name": "China Sprint",
+      "is_sprint": true,
+      "participants": [
+        {"name": "RUS", "team": "Mercedes"},
+        {"name": "LEC", "team": "Ferrari"},
+        {"name": "HAM", "team": "Ferrari"},
+        {"name": "NOR", "team": "McLaren"},
+        {"name": "ANT", "team": "Mercedes"},
+        {"name": "PIA", "team": "McLaren"},
+        {"name": "LOW", "team": "Racing Bulls"},
+        {"name": "BER", "team": "Haas"},
+        {"name": "VER", "team": "Red Bull"},
+        {"name": "OKO", "team": "Haas"},
+        {"name": "GAS", "team": "Alpine"},
+        {"name": "SAI", "team": "Williams"},
+        {"name": "BOR", "team": "Audi"},
+        {"name": "COL", "team": "Alpine"},
+        {"name": "HAD", "team": "Red Bull"},
+        {"name": "ALB", "team": "Williams"},
+        {"name": "ALO", "team": "Aston Martin"},
+        {"name": "STR", "team": "Aston Martin"},
+        {"name": "PER", "team": "Cadillac"},
+        {"name": "HUL", "team": "Audi"},
+        {"name": "BOT", "team": "Cadillac"},
+        {"name": "LIN", "team": "Racing Bulls"}
+      ]
+    }
+  ]
+}
