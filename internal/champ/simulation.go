@@ -6,8 +6,14 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
+
+type combinedResult struct {
+	DriverWinner string
+	TeamWinner   string
+}
 
 func runSingleSimulation() string {
 	participants := make([]participant, len(initialParticipantsData))
@@ -42,6 +48,72 @@ func runSingleSimulation() string {
 		return participants[i].Name < participants[j].Name
 	})
 	return participants[0].Name
+}
+
+func runSingleCombinedSimulation() combinedResult {
+	participants := make([]participant, len(initialParticipantsData))
+	for i, d := range initialParticipantsData {
+		participants[i] = participant{
+			Name:          d.Name,
+			TotalScore:    d.Score,
+			StartingScore: d.Score,
+			Coefficient:   coefficients[d.Name],
+		}
+	}
+
+	// Симуляция ГП
+	for s := 0; s < remStages; s++ {
+		indices := rand.Perm(len(participants))
+		for place, idx := range indices {
+			participants[idx].TotalScore += pointsMap[place+1]
+		}
+	}
+	// Симуляция Спринтов
+	for s := 0; s < remSprints; s++ {
+		indices := rand.Perm(len(participants))
+		for place, idx := range indices {
+			participants[idx].TotalScore += pointsMapSprint[place+1]
+		}
+	}
+
+	// Победитель среди пилотов
+	sort.Slice(participants, func(i, j int) bool {
+		if participants[i].TotalScore != participants[j].TotalScore {
+			return participants[i].TotalScore > participants[j].TotalScore
+		}
+		return participants[i].Name < participants[j].Name
+	})
+	driverWinner := participants[0].Name
+
+	// Кубок конструкторов: стартовые очки команды + очки, набранные её пилотами в симуляции.
+	teamScores := make(map[string]int, len(initialTeamsData))
+	for _, t := range initialTeamsData {
+		teamScores[t.Name] = t.Score
+	}
+
+	for _, p := range participants {
+		team, ok := driverTeams[p.Name]
+		if !ok {
+			continue
+		}
+		futurePoints := p.TotalScore - p.StartingScore
+		teamScores[team] += futurePoints
+	}
+
+	// Победитель среди команд (tie-break: имя команды)
+	teamWinner := ""
+	maxTeamScore := -1
+	for team, score := range teamScores {
+		if score > maxTeamScore || (score == maxTeamScore && (teamWinner == "" || team < teamWinner)) {
+			maxTeamScore = score
+			teamWinner = team
+		}
+	}
+
+	return combinedResult{
+		DriverWinner: driverWinner,
+		TeamWinner:   teamWinner,
+	}
 }
 
 func runSingleConstructorsSimulation() string {
@@ -144,10 +216,95 @@ func RunConstructorsSimulations() {
 
 // RunCombinedSimulations выполняет симуляции и печатает результаты пилотов и команд рядом.
 func RunCombinedSimulations() {
-	fmt.Printf("Запуск %d симуляций для пилотов и команд...\n", numSimulations)
+	fmt.Printf("Запуск %d симуляций для пилотов и команд (один цикл) в %d потоках...\n", numSimulations, numWorkers)
 
-	driverStats := simulateDrivers()
-	teamStats := simulateConstructors()
+	resultsCh := make(chan combinedResult, 1000)
+	var wg sync.WaitGroup
+
+	// counter нужен только для прогресс-бара
+	var counter atomic.Int64
+
+	winCountsDriver := make(map[string]int)
+	winCountsTeam := make(map[string]int)
+	for _, d := range initialParticipantsData {
+		winCountsDriver[d.Name] = 0
+	}
+	for _, t := range initialTeamsData {
+		winCountsTeam[t.Name] = 0
+	}
+
+	// Агрегатор результатов
+	go func() {
+		for res := range resultsCh {
+			winCountsDriver[res.DriverWinner]++
+			winCountsTeam[res.TeamWinner]++
+			counter.Add(1)
+		}
+	}()
+
+	simsPerWorker := numSimulations / numWorkers
+	for w := 0; w < numWorkers; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := 0; i < simsPerWorker; i++ {
+				resultsCh <- runSingleCombinedSimulation()
+			}
+		}()
+	}
+
+	go func() {
+		wg.Wait()
+		close(resultsCh)
+	}()
+
+	// Прогресс-бар
+	ticker := time.NewTicker(100 * time.Millisecond)
+	barWidth := 40
+	for range ticker.C {
+		curr := int(counter.Load())
+		progress := float64(curr) / float64(numSimulations)
+		filled := int(progress * float64(barWidth))
+		bar := "[" + strings.Repeat("#", filled) + strings.Repeat(" ", barWidth-filled) + "]"
+		fmt.Printf("\r%s %5.2f%% (%d/%d)", bar, progress*100, curr, numSimulations)
+
+		if curr >= numSimulations {
+			break
+		}
+	}
+	ticker.Stop()
+	fmt.Println("\n\nСимуляция (пилоты и команды) завершена.")
+
+	// Сборка stats и сортировка
+	var driverStats []winStat
+	for name, wins := range winCountsDriver {
+		driverStats = append(driverStats, winStat{
+			Name:          name,
+			Wins:          wins,
+			WinPercentage: (float64(wins) / numSimulations) * 100.0,
+		})
+	}
+	sort.Slice(driverStats, func(i, j int) bool {
+		if driverStats[i].WinPercentage != driverStats[j].WinPercentage {
+			return driverStats[i].WinPercentage > driverStats[j].WinPercentage
+		}
+		return driverStats[i].Name < driverStats[j].Name
+	})
+
+	var teamStats []winStat
+	for name, wins := range winCountsTeam {
+		teamStats = append(teamStats, winStat{
+			Name:          name,
+			Wins:          wins,
+			WinPercentage: (float64(wins) / numSimulations) * 100.0,
+		})
+	}
+	sort.Slice(teamStats, func(i, j int) bool {
+		if teamStats[i].WinPercentage != teamStats[j].WinPercentage {
+			return teamStats[i].WinPercentage > teamStats[j].WinPercentage
+		}
+		return teamStats[i].Name < teamStats[j].Name
+	})
 
 	fmt.Println("\n==================================================")
 	fmt.Println("  СВОДНАЯ ТАБЛИЦА ПРОЦЕНТА ПОБЕД: ПИЛОТЫ / КОМАНДЫ")

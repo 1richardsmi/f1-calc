@@ -69,7 +69,10 @@ func LoadData(filename string) error {
 		initialParticipantsData = append(initialParticipantsData, initialData{Name: name, Score: score})
 	}
 	sort.Slice(initialParticipantsData, func(i, j int) bool {
-		return initialParticipantsData[i].Score > initialParticipantsData[j].Score
+		if initialParticipantsData[i].Score != initialParticipantsData[j].Score {
+			return initialParticipantsData[i].Score > initialParticipantsData[j].Score
+		}
+		return initialParticipantsData[i].Name < initialParticipantsData[j].Name
 	})
 
 	initialTeamsData = nil
@@ -77,7 +80,10 @@ func LoadData(filename string) error {
 		initialTeamsData = append(initialTeamsData, teamData{Name: name, Score: score})
 	}
 	sort.Slice(initialTeamsData, func(i, j int) bool {
-		return initialTeamsData[i].Score > initialTeamsData[j].Score
+		if initialTeamsData[i].Score != initialTeamsData[j].Score {
+			return initialTeamsData[i].Score > initialTeamsData[j].Score
+		}
+		return initialTeamsData[i].Name < initialTeamsData[j].Name
 	})
 	return nil
 }
